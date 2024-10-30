@@ -11,9 +11,9 @@ function compileSW(varargin)
         sourceFilePath = varargin{1};
     end
 
-    [filePath,fileName,~]=fileparts(sourceFilePath);
+    [filePath,fileName,fileExtension]=fileparts(sourceFilePath);
 
-    sourceFilePath = [filepath, filename];
+    sourceFilePath = [filePath filesep fileName fileExtension];
     objectFilePath = [filePath filesep fileName '.o'];
     binaryFilePath = [filePath filesep fileName '.bin'];
 
