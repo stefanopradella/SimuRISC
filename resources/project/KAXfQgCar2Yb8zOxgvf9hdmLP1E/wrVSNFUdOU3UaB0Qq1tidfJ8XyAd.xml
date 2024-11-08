@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Info File="utilities/setupSimulatorPath.m" GroupUUID="default" Icon="" Name="setupSimulatorPath" Type="StartUp" Visible="0">
+    <Extension Name="StartUpPrev" Value="1b135797-42e9-43bb-8940-faf6a9c904d0"/>
+</Info>
