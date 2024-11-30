@@ -1,8 +1,9 @@
 function simulationOutput = whisperSimulateElf(NameValueArgs)
-% SIMULATEELF - Simulate Elf file and return memory and registers state.
+% WHISPERSIMULATEELF - Simulate Elf file with Whisper and return memory and registers state.
 %   Syntax:
 %       WHISPERSIMULATEELF()                                   [Prompts the user for the elf file location]
 %       WHISPERSIMULATEELF  ('ElfFilePath', 'test.elf')
+%       WHISPERSIMULATEELF  ('ElfFilePath', 'test.elf', 'WhisperConfigFilePath', 'customWhisperConfig.cfg')
     arguments
         NameValueArgs.ElfFilePath (1,1) string = ''
         NameValueArgs.WhisperConfigFilePath (1,1) string = which(SimuRISC_Environment.DEFAULT_WHISPER_CONFIG_FILE)
