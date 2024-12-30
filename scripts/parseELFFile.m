@@ -1,15 +1,23 @@
-function [instructionMemory, dataMemory, entryPointAddress] = parseELFFile(varargin)
+function [instructionMemory, dataMemory, elfExtras] = parseELFFile(filename, printOutput)
 %   PARSEELFFILE - Reads a ELF file and returns the memory data variables.
 %   Reference: https://en.wikipedia.org/wiki/Executable_and_Linkable_Format
 % 
-%   [instructionMemory, dataMemory, entryPointAddress]=parseELFFile('/home/path/to/file.elf');
+%   [instructionMemory, dataMemory, elfExtras] = parseELFFile();
+%   [instructionMemory, dataMemory, elfExtras] = parseELFFile('/home/path/to/file.elf');
+%   [instructionMemory, dataMemory, elfExtras] = parseELFFile('/home/path/to/file.elf', 'printOutput');
 
-    if nargin == 0
-        [filename, filepath] = uigetfile('*');
-        elfFilePath = [filepath, filename];
-    else
-        elfFilePath = varargin{1};
+    arguments
+        filename (1,1) string = "";
+        printOutput (1,1) string = "";
     end
+
+    if strcmp(filename, "")
+        [filename, filepath] = uigetfile('*');
+        elfFilePath = strcat(filepath, filename);
+    else
+        elfFilePath = filename;
+    end
+
 
     fileId = fopen(elfFilePath);
 
@@ -33,7 +41,7 @@ function [instructionMemory, dataMemory, entryPointAddress] = parseELFFile(varar
         otherwise
             throw(parseMExc)
     end
-    disp(['Format: ' format])
+
 
     switch e_ident(6)
         % this affects interpretation of multi-byte fields starting with offset 0x10. 
@@ -44,50 +52,32 @@ function [instructionMemory, dataMemory, entryPointAddress] = parseELFFile(varar
         otherwise
             throw(parseMExc)
     end
-    disp(['Endianness: ' endianness])
 
     if e_ident(7) ~= 1
         throw(parseMExc)
     end
 
-    disp(['ABI ID: 0x' dec2hex(e_ident(8))])
-    disp(['ABI Version: 0x' dec2hex(e_ident(9))])
-
     % Bytes 9-15 padding -> ignored
 
     e_type = reshape(dec2hex(fread(fileId, 1, '*ubit16', endianness))', 1, []);
-    disp(['Object type ID: 0x' e_type])
     e_machine = reshape(dec2hex(fread(fileId, 1, '*ubit16', endianness))', 1, []);
-    disp(['Target ISA ID: 0x' e_machine])
 
     % Bytes 20-24 ELF Version
     e_version = reshape(dec2hex(fread(fileId, 1, '*ubit32', endianness))', 1, []);
 
     e_entry = reshape(dec2hex(fread(fileId, 1, formatVarType, endianness))', 1, []);
-    disp(['Entry point address: 0x' e_entry])
-    entryPointAddress = hex2dec(e_entry);
+    elfExtras.entryPointAddress = hex2dec(e_entry);
     e_phoff = reshape(dec2hex(fread(fileId, 1, formatVarType, endianness))', 1, []);
-    disp(['Program header address: 0x' e_phoff])
     e_shoff = reshape(dec2hex(fread(fileId, 1, formatVarType, endianness))', 1, []);
-    disp(['Section header address: 0x' e_shoff])
-
     e_flags = reshape(dec2hex(fread(fileId, 1, '*ubit32', endianness))', 1, []);
-    disp(['Flags: 0x' e_flags])
     e_ehsize =  reshape(dec2hex(fread(fileId, 1, '*ubit16', endianness))', 1, []);
-    disp(['Header size: 0x' e_ehsize])
     e_phentsize = reshape(dec2hex(fread(fileId, 1, '*ubit16', endianness))', 1, []);
-    disp(['Program header entries size: 0x' e_phentsize])
     e_phnum = reshape(dec2hex(fread(fileId, 1, '*ubit16', endianness))', 1, []);
-    disp(['Program header entries number: 0x' e_phnum])
     e_shentsize = reshape(dec2hex(fread(fileId, 1, '*ubit16', endianness))', 1, []);
-    disp(['Section header entry size: 0x' e_shentsize])
     e_shnum = reshape(dec2hex(fread(fileId, 1, '*ubit16', endianness))', 1, []);
-    disp(['Section header entries number: 0x' e_shnum])
     e_shstrndx = reshape(dec2hex(fread(fileId, 1, '*ubit16', endianness))', 1, []);
-    disp(['Section header names entry index: 0x' e_shstrndx])
 
     % Read program header
-    disp('=== Program Header ===')
     fseek(fileId, hex2dec(e_phoff),'bof');
     p_type = strings(hex2dec(e_phnum), 1);
     p_flags = strings(hex2dec(e_phnum), 1);
@@ -114,10 +104,8 @@ function [instructionMemory, dataMemory, entryPointAddress] = parseELFFile(varar
         p_align(iPHeader) = reshape(dec2hex(fread(fileId, 1, formatVarType, endianness))', 1, []);
     end
     programHeader  = table(p_type,p_flags,p_offset,p_vaddr,p_paddr,p_filesz, p_memsz, p_align);
-    disp(programHeader)
 
     % Read section header
-    disp('=== Section Header ===')
     fseek(fileId, hex2dec(e_shoff),'bof');
     Name = strings(hex2dec(e_shnum), 1);
     sh_name = strings(hex2dec(e_shnum), 1);
@@ -169,13 +157,51 @@ function [instructionMemory, dataMemory, entryPointAddress] = parseELFFile(varar
     end
     sectionHeader.Properties.RowNames=Name;
 
-    disp(sectionHeader)
+
+    % Look in .symtab and .strtab for the address of the .tohost variable
+
+    fseek(fileId,hex2dec(sectionHeader{".strtab","sh_offset"}),'bof');
+    strtab = char(fread(fileId, hex2dec(sectionHeader{".strtab","sh_size"})))';
+
+    % TODO: implement complete parsing of symbols table, different between
+    % 32 and 64 bit ELFs
+    if contains(strtab, 'tohost')
+        fseek(fileId,hex2dec(sectionHeader{".symtab","sh_offset"}),'bof');
+        nEntries = hex2dec(sectionHeader{".symtab","sh_entsize"});
+
+        for i = 1:nEntries
+
+            % Extract fields
+            st_name = reshape(dec2hex(fread(fileId, 1, '*ubit32', endianness))', 1, []);
+            st_value = reshape(dec2hex(fread(fileId, 1, formatVarType, endianness))', 1, []);
+            st_size = reshape(dec2hex(fread(fileId, 1, formatVarType, endianness))', 1, []);
+            st_info = dec2hex(fread(fileId, 1));
+            st_other = dec2hex(fread(fileId, 1));
+            st_shndx = reshape(dec2hex(fread(fileId, 1, '*ubit16', endianness))', 1, []);
+
+            % Get symbol name from .strtab
+            nameIdx = hex2dec(st_name);
+            if nameIdx > 0
+                strtab_split = split(strtab(nameIdx+1:end), char(0));
+                symbolName = strtab_split{1};
+                if isempty(symbolName)
+                    symbolName = '<no name>';
+                end
+            else
+                symbolName = '<no name>';
+            end
+
+            if strcmp(symbolName, 'tohost')
+                elfExtras.tohostVarInfo.address = st_value;
+            end
+        end
+    end
 
     % Reading .text section
     instructionMemory = uint32(zeros(2^SimuRISC_Constants.ADDR_BUS_WIDTH/(SimuRISC_Constants.XLEN/8), 1));
     fseek(fileId,hex2dec(sectionHeader{".text","sh_offset"}),'bof');
-    address = hex2dec(sectionHeader{".text","sh_addr"})/(SimuRISC_Constants.XLEN/8);
-    for i = 1:hex2dec(sectionHeader{".text","sh_size"})
+    address = hex2dec(sectionHeader{".text","sh_addr"})/(SimuRISC_Constants.XLEN/8) + 1;                % array index is one-based
+    for i = 1:hex2dec(sectionHeader{".text","sh_size"})/(SimuRISC_Constants.XLEN/8)
         instructionMemory(address) = hex2dec(reshape(dec2hex(fread(fileId, 1, formatVarType, endianness))', 1, []));
         address = address + 1;
     end
@@ -183,9 +209,63 @@ function [instructionMemory, dataMemory, entryPointAddress] = parseELFFile(varar
     % Reading .data section
     dataMemory = uint32(zeros(2^SimuRISC_Constants.ADDR_BUS_WIDTH/(SimuRISC_Constants.XLEN/8), 1));
     fseek(fileId,hex2dec(sectionHeader{".data","sh_offset"}),'bof');
-    address = hex2dec(sectionHeader{".data","sh_addr"})/(SimuRISC_Constants.XLEN/8);
-    for i = 1:hex2dec(sectionHeader{".data","sh_size"})
+    address = hex2dec(sectionHeader{".data","sh_addr"})/(SimuRISC_Constants.XLEN/8) + 1;                % array index is one-based
+    for i = 1:hex2dec(sectionHeader{".data","sh_size"})/(SimuRISC_Constants.XLEN/8)
         dataMemory(address) = hex2dec(reshape(dec2hex(fread(fileId, 1, formatVarType, endianness))', 1, []));
         address = address + 1;
+    end
+
+    if strcmp(printOutput, "printOutput")
+        fprintf('Format: %s\n', format);
+        fprintf('Endianness: %s\n', endianness);
+        fprintf('ABI ID: 0x%s\n', dec2hex(e_ident(8)));
+        fprintf('ABI Version: 0x%s\n', dec2hex(e_ident(9)));
+        fprintf('Object type ID: 0x%s\n', e_type);
+        fprintf('Target ISA ID: 0x%s\n', e_machine);
+        fprintf('Entry point address: 0x%s\n', e_entry);
+        fprintf('Program header address: 0x%s\n', e_phoff);
+        fprintf('Section header address: 0x%s\n', e_shoff);
+        fprintf('Flags: 0x%s\n', e_flags);
+        fprintf('Header size: 0x%s\n', e_ehsize);
+        fprintf('Program header entries size: 0x%s\n', e_phentsize);
+        fprintf('Program header entries number: 0x%s\n', e_phnum);
+        fprintf('Section header entry size: 0x%s\n', e_shentsize);
+        fprintf('Section header entries number: 0x%s\n', e_shnum);
+        fprintf('Section header names entry index: 0x%s\n', e_shstrndx);
+
+        fprintf('=== Program Header ===')
+        disp(programHeader)
+
+        fprintf('=== Section Header ===')
+        disp(sectionHeader)
+
+
+    end
+end
+
+function typeString = getSymbolType(st_info)
+    % Extract the lower 4 bits (symbol type) from st_info
+    symbolType = bitand(st_info, 15); % 15 = 0x0F
+
+    % Map the symbol type to a string
+    switch symbolType
+        case 0
+            typeString = 'NOTYPE';
+        case 1
+            typeString = 'OBJECT';
+        case 2
+            typeString = 'FUNC';
+        case 3
+            typeString = 'SECTION';
+        case 4
+            typeString = 'FILE';
+        case 13
+            typeString = 'COMMON';
+        case 14
+            typeString = 'TLS';
+        case 15
+            typeString = 'LOOS+0'; % OS-specific
+        otherwise
+            typeString = 'RESERVED';
     end
 end

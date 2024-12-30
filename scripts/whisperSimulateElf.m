@@ -3,9 +3,11 @@ function simulationOutput = whisperSimulateElf(NameValueArgs)
 %   Syntax:
 %       WHISPERSIMULATEELF()                                   [Prompts the user for the elf file location]
 %       WHISPERSIMULATEELF  ('ElfFilePath', 'test.elf')
+%       WHISPERSIMULATEELF  ('ElfFilePath', 'test.elf', 'PrintOutput', true)
 %       WHISPERSIMULATEELF  ('ElfFilePath', 'test.elf', 'WhisperConfigFilePath', 'customWhisperConfig.cfg')
     arguments
         NameValueArgs.ElfFilePath (1,1) string = ''
+        NameValueArgs.PrintOutput (1,1) logical = false
         NameValueArgs.WhisperConfigFilePath (1,1) string = which(SimuRISC_Environment.DEFAULT_WHISPER_CONFIG_FILE)
     end
 
@@ -18,6 +20,7 @@ function simulationOutput = whisperSimulateElf(NameValueArgs)
     end
 
     whisperConfigFilePath = NameValueArgs.WhisperConfigFilePath;
+    printOutput = NameValueArgs.PrintOutput;
 
     % Get the size of the code section and the offset of the data section
     [~, cmdout] = system(strcat("riscv32-unknown-elf-objdump -h ", elfFilePath));
@@ -45,14 +48,20 @@ function simulationOutput = whisperSimulateElf(NameValueArgs)
 
     nInstructions = sscanf(responseRows(2), "Retired %d");
 
-    fprintf("Simulating %d instructions...\n", nInstructions)
+    vprintf(printOutput, "Simulating %d instructions...\n", nInstructions)
 
     % Simulate elf file and save status after last instruction
     % -1 is because the last instruction writes to the .tohost variable to
     % terminate the execution
-    system(strcat("whisper ", elfFilePath, " --snapshotperiod ", num2str(nInstructions-1), " --snapshotdir ", ...
+    [ret, out] = system(strcat("whisper ", elfFilePath, " --snapshotperiod ", num2str(nInstructions-1), " --snapshotdir ", ...
         filepath, "/snapshot --configfile ", whisperConfigFilePath));
 
+    vprintf(printOutput, "%s\n", out)
+
+    if ret ~= 0
+        error('Whisper execution failed, check system configuration')
+    end
+    
     % Get used memory blocks
     memoryBlocks = splitlines(string(fileread(strcat(filepath, "/snapshot0/usedblocks"))));
     memoryBlocksInfo = dictionary();
@@ -65,39 +74,60 @@ function simulationOutput = whisperSimulateElf(NameValueArgs)
 
 
     % Read register status from snapshot
-    registerFile = dictionary();
+    simulationOutput.registerFile = zeros(1, 32);
+    simulationOutput.pc = 0;
 
     registerDumpFile = splitlines(string(fileread(strcat(filepath, "/snapshot0/registers"))));
     for iLine = 1:numel(registerDumpFile)
         if regexp(registerDumpFile(iLine), "x\s\d+\s")
             lineSplit = split(registerDumpFile(iLine));
-            registerFile(strcat("x", lineSplit(2))) = lineSplit(3);
+            simulationOutput.registerFile(str2double(lineSplit(2))+1) = hex2dec(lineSplit(3));
+        elseif regexp(registerDumpFile(iLine), "pc\s")
+            lineSplit = split(registerDumpFile(iLine));
+            simulationOutput.pc = hex2dec(lineSplit(2));
         end
+
     end
 
     % Read memory status from snapshot
     movefile(strcat(filepath, "/snapshot0/memory"), strcat(filepath, "/snapshot0/memory.gz"))
-    system(strcat("gzip -dk ", filepath, "/snapshot0/memory"))
+    system(strcat("gzip -dk ", filepath, "/snapshot0/memory"));
     memoryDump = loadMemory(strcat(filepath, "/snapshot0/memory"));
     
     % Extracting memory dump
+    simulationOutput.codeMemory = uint32(zeros(2^SimuRISC_Constants.ADDR_BUS_WIDTH/(SimuRISC_Constants.XLEN/8), 1));
+    simulationOutput.dataMemory = uint32(zeros(2^SimuRISC_Constants.ADDR_BUS_WIDTH/(SimuRISC_Constants.XLEN/8), 1));
+
+    textSectionBaseIndex = textSectionBaseAddr / (SimuRISC_Constants.XLEN/8);
+    dataSectionBaseIndex = dataSectionBaseAddr / (SimuRISC_Constants.XLEN/8);
+
     memoryPointer = 1;
     memoryBlocksInfo_keys = memoryBlocksInfo.keys();
     for iBlock = 1:memoryBlocksInfo.numEntries
         memoryOffset = memoryBlocksInfo_keys(iBlock);
         sectionName = memoryLocations(memoryOffset);
         
+        textSectionArraySize = str2double(memoryBlocksInfo(memoryOffset))/(SimuRISC_Constants.XLEN/8);
+        dataSectionArraySize = str2double(memoryBlocksInfo(memoryOffset))/(SimuRISC_Constants.XLEN/8);
+
         switch sectionName
             case ".text"
-                disp('Extracting .text memory dump...')
-                simulationOutput.codeMemory = memoryDump(memoryPointer: memoryPointer+str2double(memoryBlocksInfo(memoryOffset))/4-1, :);
+                vprintf(printOutput, 'Extracting .text memory dump...')
+                simulationOutput.codeMemory(textSectionBaseIndex+1:textSectionBaseIndex+textSectionArraySize) = bytesToWords(memoryDump(memoryPointer: memoryPointer+textSectionArraySize-1, :));
                 memoryPointer = memoryPointer + str2double(memoryBlocksInfo(memoryOffset))/4;
             case ".data"
-                disp('Extracting .data memory dump...')
-                simulationOutput.dataMemory = memoryDump(memoryPointer: memoryPointer+str2double(memoryBlocksInfo(memoryOffset))/4-1, :);
+                vprintf(printOutput, 'Extracting .data memory dump...')
+                simulationOutput.dataMemory(dataSectionBaseIndex+1:dataSectionBaseIndex+dataSectionArraySize) = bytesToWords(memoryDump(memoryPointer: memoryPointer+dataSectionArraySize-1, :));
                 memoryPointer = memoryPointer + str2double(memoryBlocksInfo(memoryOffset))/4;
             otherwise
-                disp(['Unrecognized section: ' sectionName ', ignoring...'])
+                vprintf(printOutput, 'Unrecognized section: %s, ignoring...', sectionName)
         end
     end
+
+    % Writing the correct value to the .tohost variable address, to take
+    % account of the last instruction which is not dumped
+
+    [~, ~, elfExtras] = parseELFFile(elfFilePath);
+    simulationOutput.dataMemory(hex2dec(elfExtras.tohostVarInfo.address) /(SimuRISC_Constants.XLEN/8) + 1) = 1;
+
 end
