@@ -1,1 +1,1 @@
-hdlsetuptoolpath('ToolName','Xilinx Vivado','ToolPath', SimuRISC_Environment.Vivado_Path);
+hdlsetuptoolpath('ToolName','Xilinx Vivado','ToolPath', SimuRISC_Environment.VIVADO_PATH);
