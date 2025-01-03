@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Info File="utilities/setupVivadoPath.m" GroupUUID="default" Icon="" Name="setupVivadoPath" Type="StartUp" Visible="0">
+    <Extension Name="StartUpPrev" Value="e973b8d8-4d85-4fbc-86a7-77d4d3d2bfc4"/>
+</Info>
