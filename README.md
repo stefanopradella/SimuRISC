@@ -32,7 +32,7 @@ To compile, simulate and verify code execution an installation, the following so
 
 In this example, all the tools are installed under `/home/<user>/riscv`
 ##### To install the RISC-V Toolchain:
-Install the required packages:cd ..
+Install the required packages:
 ``` sudo apt install autoconf automake autotools-dev curl gawk texinfo bison flex libmpc-dev```
 
 Then install the toolchain:
