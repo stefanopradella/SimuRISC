@@ -24,13 +24,13 @@ function compileSW(NameValueArgs)
     elfFilePath = strcat(filePath, filesep, fileName, '.elf');
 
 
-    [status,cmdout] = system(strcat("riscv32-unknown-elf-as -o ", objectFilePath," ", sourceFilePath));
+    [status,cmdout] = system(strcat("riscv64-unknown-elf-as -march=",SimuRISC_Constants.ARCH, " -mabi=", SimuRISC_Constants.ABI, " -o ", objectFilePath," ", sourceFilePath));
     if status ~= 0
         ME = MException('compileSW:assemblerCommandError', ...
             'Error invoking assembler command: %s',cmdout);
     throw(ME)
     end
-    [status,cmdout] = system(strcat("riscv32-unknown-elf-ld -o ", elfFilePath, " -T ", linkerFilePath, " -m elf32lriscv -nostdlib --no-relax ", objectFilePath));
+    [status,cmdout] = system(strcat("riscv64-unknown-elf-ld -o ", elfFilePath, " -T ", linkerFilePath, " -m elf32lriscv -nostdlib --no-relax ", objectFilePath));
     if status ~= 0
         ME = MException('compileSW:objcopyCommandError', ...
             'Error invoking objcopy command: %s',cmdout);

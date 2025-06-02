@@ -23,7 +23,7 @@ function simulationOutput = whisperSimulateElf(NameValueArgs)
     printOutput = NameValueArgs.PrintOutput;
 
     % Get the size of the code section and the offset of the data section
-    [~, cmdout] = system(strcat("riscv32-unknown-elf-objdump -h ", elfFilePath));
+    [~, cmdout] = system(strcat("riscv64-unknown-elf-objdump -h ", elfFilePath));
     cmdout = splitlines(string(cmdout));
 
     memoryLocations = dictionary();
@@ -46,7 +46,7 @@ function simulationOutput = whisperSimulateElf(NameValueArgs)
     [~, response] = system(strcat("whisper ", elfFilePath, " --configfile ", whisperConfigFilePath));
     responseRows = splitlines(string(response));
 
-    nInstructions = sscanf(responseRows(2), "Retired %d");
+    nInstructions = sscanf(responseRows(2), "Executed %d");
 
     vprintf(printOutput, "Simulating %d instructions...\n", nInstructions)
 

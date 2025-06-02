@@ -32,7 +32,7 @@ To compile, simulate and verify code execution an installation, the following so
 
 In this example, all the tools are installed under `/home/<user>/riscv`
 ##### To install the RISC-V Toolchain:
-Install the required packages:
+Install the required packages:cd ..
 ``` sudo apt install autoconf automake autotools-dev curl gawk texinfo bison flex libmpc-dev```
 
 Then install the toolchain:
@@ -44,7 +44,7 @@ cd tmp
 
 git clone https://github.com/riscv/riscv-gnu-toolchain
 cd riscv-gnu-toolchain
-./configure --prefix=$RISCV --with-arch=rv32i
+./configure --prefix=$RISCV --enable-multilib
 make
 make install
 ```
@@ -52,7 +52,7 @@ make install
 After that, the compiler binaries will be available on `/home/<user>/riscv/bin`.
 You can now add the binaries path to the PATH environment variable. Open the `~/.bashrc` file, and add the following line at the end of the file
 ```
-export PATH="$PATH:/home/<user>/riscv/bin:home/<user>/riscv/riscv32-unknown-elf/bin"
+export PATH="$PATH:/home/<user>/riscv/bin:home/<user>/riscv/riscv64-unknown-elf/bin"
 ```
 ##### To install the Whisper ISA Simulator:
 
