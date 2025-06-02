@@ -66,7 +66,7 @@ function [instructionMemory, dataMemory, elfExtras] = parseELFFile(filename, pri
     e_version = reshape(dec2hex(fread(fileId, 1, '*ubit32', endianness))', 1, []);
 
     e_entry = reshape(dec2hex(fread(fileId, 1, formatVarType, endianness))', 1, []);
-    elfExtras.entryPointAddress = hex2dec(e_entry);
+    elfExtras.entryPointAddress = hex2dec(e_entry) - SimuRISC_Constants.RAM_BASE_ADDR;
     e_phoff = reshape(dec2hex(fread(fileId, 1, formatVarType, endianness))', 1, []);
     e_shoff = reshape(dec2hex(fread(fileId, 1, formatVarType, endianness))', 1, []);
     e_flags = reshape(dec2hex(fread(fileId, 1, '*ubit32', endianness))', 1, []);
@@ -192,7 +192,7 @@ function [instructionMemory, dataMemory, elfExtras] = parseELFFile(filename, pri
             end
 
             if strcmp(symbolName, 'tohost')
-                elfExtras.tohostVarInfo.address = st_value;
+                elfExtras.tohostVarInfo.address = hex2dec(st_value) - SimuRISC_Constants.RAM_BASE_ADDR;
             end
         end
     end
@@ -200,7 +200,7 @@ function [instructionMemory, dataMemory, elfExtras] = parseELFFile(filename, pri
     % Reading .text section
     instructionMemory = uint32(zeros(2^SimuRISC_Constants.ADDR_BUS_WIDTH/(SimuRISC_Constants.XLEN/8), 1));
     fseek(fileId,hex2dec(sectionHeader{".text","sh_offset"}),'bof');
-    address = hex2dec(sectionHeader{".text","sh_addr"})/(SimuRISC_Constants.XLEN/8) + 1;                % array index is one-based
+    address = (hex2dec(sectionHeader{".text","sh_addr"}) - SimuRISC_Constants.RAM_BASE_ADDR)/(SimuRISC_Constants.XLEN/8) + 1;                % array index is one-based
     for i = 1:hex2dec(sectionHeader{".text","sh_size"})/(SimuRISC_Constants.XLEN/8)
         instructionMemory(address) = hex2dec(reshape(dec2hex(fread(fileId, 1, formatVarType, endianness))', 1, []));
         address = address + 1;
@@ -209,7 +209,7 @@ function [instructionMemory, dataMemory, elfExtras] = parseELFFile(filename, pri
     % Reading .data section
     dataMemory = uint32(zeros(2^SimuRISC_Constants.ADDR_BUS_WIDTH/(SimuRISC_Constants.XLEN/8), 1));
     fseek(fileId,hex2dec(sectionHeader{".data","sh_offset"}),'bof');
-    address = hex2dec(sectionHeader{".data","sh_addr"})/(SimuRISC_Constants.XLEN/8) + 1;                % array index is one-based
+    address = (hex2dec(sectionHeader{".data","sh_addr"}) - SimuRISC_Constants.RAM_BASE_ADDR)/(SimuRISC_Constants.XLEN/8) + 1;                % array index is one-based
     for i = 1:hex2dec(sectionHeader{".data","sh_size"})/(SimuRISC_Constants.XLEN/8)
         dataMemory(address) = hex2dec(reshape(dec2hex(fread(fileId, 1, formatVarType, endianness))', 1, []));
         address = address + 1;

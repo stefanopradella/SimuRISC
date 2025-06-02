@@ -19,30 +19,7 @@ fprintf("Done!\n");
 
 for iTest = 1:numel(testList)
     testName = char(testList(iTest));
-    testFolderPath = char(strcat(getProjectRoot(), filesep, "tests", filesep, testName));
-    sourceFilePath = [testFolderPath filesep testName '.s'];
-    elfFilePath = [testFolderPath filesep testName '.elf'];
 
-    % Compile test code
-    compileSW('SourceFilePath', sourceFilePath);
-    [instructionMemory, dataMemory, elfExtras] = parseELFFile(elfFilePath);
-    
-    entryPointAddress = elfExtras.entryPointAddress;
-
-    startTime = datetime('now');
-
-    warning('off');                 % Turning off as the intended wrap on overflow will issue a warning
-    simout = sim('SimuRISC_tb');
-    warning('on');
-
-    endTime = datetime('now');
-
-    % Get dump of data memory after model execution
-    modelOutput.dataMemory = getRAMDump(simout, dataMemory);
-
-    % Get the register status
-    modelOutput.pc = find(simout.logsout, "pc").Values.Data(end);
-    modelOutput.registerFile = find(simout.logsout, "registerFile").Values.Data(end, :);
 
     % Simulate test and get RAM dump
     simulationOutput = whisperSimulateElf("ElfFilePath", elfFilePath);

@@ -6,5 +6,6 @@ classdef SimuRISC_Constants
         DATATYPE_MEMORY_ADDR        =   fixdt(0,SimuRISC_Constants.ADDR_BUS_WIDTH-log2(SimuRISC_Constants.XLEN/8),0);
         ARCH                        =   'rv32i';
         ABI                         =   'ilp32';
+        RAM_BASE_ADDR               =   hex2dec('80000000');
     end
 end

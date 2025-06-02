@@ -1,13 +1,16 @@
-MEMORY
-{
-ROM (rwx) : ORIGIN = 0x00002000, LENGTH = 0x6000
-RAM (rwx) : ORIGIN = 0x00008000, LENGTH = 0x8000
-}
+OUTPUT_ARCH( "riscv" )
+ENTRY(_start)
 
 SECTIONS
 {
-    . = 0x2000;
-    .text : { *(.text) } > ROM
-    . = 0x8000;
-    .data : { *(.data) } > RAM
+  . = 0x80000000;
+  .text.init : { *(.text.init) }
+  . = ALIGN(0x1000);
+  .tohost : { *(.tohost) }
+  . = ALIGN(0x1000);
+  .text : { *(.text) }
+  . = ALIGN(0x1000);
+  .data : { *(.data) }
+  .bss : { *(.bss) }
+  _end = .;
 }

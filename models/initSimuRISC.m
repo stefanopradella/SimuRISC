@@ -3,4 +3,3 @@ registerSize                    =   ['uint' num2str(SimuRISC_Constants.XLEN)];
 
 clockFrequency                  =   45e6;
 modelStopCondition              =   "tohost";
-tohost_address                  =   hex2dec("8000");
