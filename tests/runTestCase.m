@@ -32,6 +32,7 @@ function modelOutput = runTestCase(NameValueArgs)
     modelOutput.dataMemory = getRAMDump(simOut, modelInput.dataMemory);
 
     % Get the register status
+    modelOutput.CSR = getCSRDump(simOut);
     modelOutput.pc = find(simOut.logsout, "pc").Values.Data(end);
     modelOutput.registerFile = find(simOut.logsout, "registerFile").Values.Data(end, :);
 end

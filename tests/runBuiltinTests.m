@@ -40,12 +40,15 @@ for iTest = 1:numel(testList)
     assert(isequal(simulationOutput.dataMemory, modelOutput.dataMemory));
     assert(isequal(simulationOutput.pc, modelOutput.pc));
     assert(isequal(simulationOutput.registerFile, modelOutput.registerFile));
+    assert(isequal(simulationOutput.CSR, modelOutput.CSR));
     status = 'PASSED';
 
     endTime = datetime('now');
     
     printTestSummary(testName, status, startTime, endTime)
 end
+
+disp('END!')
 
 function printTestSummary(testName, status, startTime, endTime)
 

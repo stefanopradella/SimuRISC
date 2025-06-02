@@ -77,22 +77,26 @@ function simulationOutput = whisperSimulateElf(NameValueArgs)
     end
 
 
-    % Read register status from snapshot
+    % Read GP registers and CSR status from snapshot
     simulationOutput.registerFile = zeros(1, 32);
+    simulationOutput.CSR = zeros(1, size(SimuRISC_Constants.CSR_LUT, 1));
     simulationOutput.pc = 0;
 
     registerDumpFile = splitlines(string(fileread(strcat(filepath, "/snapshot0/registers"))));
     for iLine = 1:numel(registerDumpFile)
-        if regexp(registerDumpFile(iLine), "x\s\d+\s")
-            lineSplit = split(registerDumpFile(iLine));
+        lineText = registerDumpFile(iLine);
+        lineSplit = split(lineText);
+        if regexp(lineText, "x\s\d+")
             simulationOutput.registerFile(str2double(lineSplit(2))+1) = hex2dec(lineSplit(3));
-        elseif regexp(registerDumpFile(iLine), "pc\s")
-            lineSplit = split(registerDumpFile(iLine));
+        elseif regexp(lineText, "pc\s")
             simulationOutput.pc = hex2dec(lineSplit(2));
-        elseif regexp(registerDumpFile(iLine), "c\s\d+\s")
+        elseif regexp(lineText, "c\s\d+")
+            simulationOutput.CSR(lutLookup(SimuRISC_Constants.CSR_LUT, hex2dec(lineSplit(2)))) = hex2dec(lineSplit(3));
+        
         end
-
     end
+
+    
 
     % Read memory status from snapshot
     movefile(strcat(filepath, "/snapshot0/memory"), strcat(filepath, "/snapshot0/memory.gz"))
