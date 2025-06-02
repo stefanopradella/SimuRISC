@@ -166,7 +166,7 @@ function [instructionMemory, dataMemory, elfExtras] = parseELFFile(filename, pri
     % 32 and 64 bit ELFs
     if contains(strtab, 'tohost')
         fseek(fileId,hex2dec(sectionHeader{".symtab","sh_offset"}),'bof');
-        nEntries = hex2dec(sectionHeader{".symtab","sh_entsize"});
+        nEntries = hex2dec(sectionHeader{".symtab","sh_size"})/hex2dec(sectionHeader{".symtab","sh_entsize"});
 
         for i = 1:nEntries
 
