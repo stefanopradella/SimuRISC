@@ -21,6 +21,10 @@
 As an engineer familiar with MATLAB and Simulink, my main goal was to gain hands-on experience in designing a processor core. Additionally, I aimed to explore the capabilities and limitations of HDL Coder in this specific context. I believe that this approach to designing the core can be a valuable tool for teaching the principles of processor operation, supported by the intuitive visualization provided by Simulink.
 ## Environment Setup
 
+Required MATLAB Add-Ons:
+- Simulink
+- HDL Coder
+
 To compile, simulate and verify code execution an installation, the following software is needed:
 
 - [RISC-V Toolchain]([https://github.com/riscv/riscv-gnu-toolchain]())
@@ -28,6 +32,10 @@ To compile, simulate and verify code execution an installation, the following so
 
 In this example, all the tools are installed under `/home/<user>/riscv`
 ##### To install the RISC-V Toolchain:
+Install the required packages:
+``` sudo apt install autoconf automake autotools-dev curl gawk texinfo bison flex libmpc-dev```
+
+Then install the toolchain:
 ```
 mkdir ~/riscv
 export RISCV=/home/<user>/riscv
@@ -36,8 +44,6 @@ cd tmp
 
 git clone https://github.com/riscv/riscv-gnu-toolchain
 cd riscv-gnu-toolchain
-mkdir build
-cd build
 ./configure --prefix=$RISCV --with-arch=rv32i
 make
 make install
@@ -51,15 +57,17 @@ export PATH="$PATH:/home/<user>/riscv/bin:home/<user>/riscv/riscv32-unknown-elf/
 ##### To install the Whisper ISA Simulator:
 
 ```
-sudo apt-get install libboost-all-dev
+sudo apt install libboost-all-dev
 ```
 You can locate the boost directory path using the following command: `whereis boost`
 After that, use the path in the following commands to install Whisper:
 ```
-git clone https://github.com/chipsalliance/VeeR-ISS
-cd VeeR-ISS
+cd /home/<user>/riscv
+git clone https://github.com/tenstorrent/whisper
+cd whisper
 make BOOST_DIR=<DIR>
 ```
+
 Class `SimuRISC_Environment.m` contains the paths to the binaries of the required software. You should adjust them according to your actual environment.
 ## Test Runs
 
