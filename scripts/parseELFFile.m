@@ -159,7 +159,6 @@ function [instructionMemory, dataMemory, elfExtras] = parseELFFile(filename, pri
 
 
     % Look in .symtab and .strtab for the address of the .tohost variable
-
     fseek(fileId,hex2dec(sectionHeader{".strtab","sh_offset"}),'bof');
     strtab = char(fread(fileId, hex2dec(sectionHeader{".strtab","sh_size"})))';
 
@@ -198,21 +197,29 @@ function [instructionMemory, dataMemory, elfExtras] = parseELFFile(filename, pri
     end
 
     % Reading .text section
+    if any(strcmp(sectionHeader.Properties.RowNames, '.text'))              % Nominal case
+        textSectionName = '.text';
+    elseif any(strcmp(sectionHeader.Properties.RowNames, '.text.init'))     % riscv-tests case
+        textSectionName = '.text.init';
+    end
+
     instructionMemory = uint32(zeros(2^SimuRISC_Constants.ADDR_BUS_WIDTH/(SimuRISC_Constants.XLEN/8), 1));
-    fseek(fileId,hex2dec(sectionHeader{".text","sh_offset"}),'bof');
-    address = (hex2dec(sectionHeader{".text","sh_addr"}) - SimuRISC_Constants.RAM_BASE_ADDR)/(SimuRISC_Constants.XLEN/8) + 1;                % array index is one-based
-    for i = 1:hex2dec(sectionHeader{".text","sh_size"})/(SimuRISC_Constants.XLEN/8)
+    fseek(fileId,hex2dec(sectionHeader{textSectionName,"sh_offset"}),'bof');
+    address = (hex2dec(sectionHeader{textSectionName,"sh_addr"}) - SimuRISC_Constants.RAM_BASE_ADDR)/(SimuRISC_Constants.XLEN/8) + 1;                % array index is one-based
+    for i = 1:hex2dec(sectionHeader{textSectionName,"sh_size"})/(SimuRISC_Constants.XLEN/8)
         instructionMemory(address) = hex2dec(reshape(dec2hex(fread(fileId, 1, formatVarType, endianness))', 1, []));
         address = address + 1;
     end
     
     % Reading .data section
     dataMemory = uint32(zeros(2^SimuRISC_Constants.ADDR_BUS_WIDTH/(SimuRISC_Constants.XLEN/8), 1));
-    fseek(fileId,hex2dec(sectionHeader{".data","sh_offset"}),'bof');
-    address = (hex2dec(sectionHeader{".data","sh_addr"}) - SimuRISC_Constants.RAM_BASE_ADDR)/(SimuRISC_Constants.XLEN/8) + 1;                % array index is one-based
-    for i = 1:hex2dec(sectionHeader{".data","sh_size"})/(SimuRISC_Constants.XLEN/8)
-        dataMemory(address) = hex2dec(reshape(dec2hex(fread(fileId, 1, formatVarType, endianness))', 1, []));
-        address = address + 1;
+    if any(strcmp(sectionHeader.Properties.RowNames, '.data'))
+        fseek(fileId,hex2dec(sectionHeader{".data","sh_offset"}),'bof');
+        address = (hex2dec(sectionHeader{".data","sh_addr"}) - SimuRISC_Constants.RAM_BASE_ADDR)/(SimuRISC_Constants.XLEN/8) + 1;                % array index is one-based
+        for i = 1:hex2dec(sectionHeader{".data","sh_size"})/(SimuRISC_Constants.XLEN/8)
+            dataMemory(address) = hex2dec(reshape(dec2hex(fread(fileId, 1, formatVarType, endianness))', 1, []));
+            address = address + 1;
+        end
     end
 
     if strcmp(printOutput, "printOutput")

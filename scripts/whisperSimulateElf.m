@@ -28,7 +28,7 @@ function simulationOutput = whisperSimulateElf(NameValueArgs)
 
     memoryLocations = dictionary();
     for iLine = 1:numel(cmdout)
-        if regexp(cmdout(iLine), "\s+\d+\s+\.text\s+")
+        if regexp(cmdout(iLine), "\s+\d+\s+\.text(?:\.init)?\s+")
             lineSplit = split(cmdout(iLine));
             nInstructions = hex2dec(lineSplit(4))/4;                        % TODO parametric instruction length (maybe with a constant)
             textSectionBaseAddr = hex2dec(lineSplit(5));
@@ -99,7 +99,12 @@ function simulationOutput = whisperSimulateElf(NameValueArgs)
     simulationOutput.dataMemory = uint32(zeros(2^SimuRISC_Constants.ADDR_BUS_WIDTH/(SimuRISC_Constants.XLEN/8), 1));
 
     textSectionBaseIndex = (textSectionBaseAddr - SimuRISC_Constants.RAM_BASE_ADDR) / (SimuRISC_Constants.XLEN/8);
-    dataSectionBaseIndex = (dataSectionBaseAddr - SimuRISC_Constants.RAM_BASE_ADDR) / (SimuRISC_Constants.XLEN/8);
+
+    if exist('dataSectionBaseAddr', 'var')
+        dataSectionBaseIndex = (dataSectionBaseAddr - SimuRISC_Constants.RAM_BASE_ADDR) / (SimuRISC_Constants.XLEN/8);
+    else
+        dataSectionBaseIndex = 0;
+    end
     
     memoryPointer = 1;
     memoryBlocksInfo_keys = memoryBlocksInfo.keys();
