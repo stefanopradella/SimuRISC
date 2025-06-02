@@ -1,13 +1,14 @@
-.global _boot
-.text
+.global _start
+.section .text.init
 
-_boot:
+_start:
     li x1, 1
     li x2, 10
 
 li x3, 2
 li x4, 2
 li x5, 3
+li x7, 3
 lw x6, testvar
 
 bne_test:
@@ -27,7 +28,11 @@ bltu_test:
     beq x4, x3, error
 
 bgeu_test:
-    bgeu x6, x5, exit
+    bgeu x6, x5, beq_test
+    beq x4, x3, error
+
+beq_test:
+    beq x7, x5, exit
     beq x4, x3, error
 
 exit:
@@ -38,7 +43,12 @@ exit:
 error:
     li x1, 0xFFFF
 
-.data
+.section .tohost
+    .align 6
+    .global tohost
+tohost: 
+    .dword 0
+
+.section .data
 variable: 
-    tohost:     .dword  0
     testvar:    .word   0xdeadbeef

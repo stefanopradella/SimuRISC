@@ -1,7 +1,7 @@
-.global _boot
-.text
+.global _start
+.section .text.init
 
-_boot:
+_start:
     la x1, testvar
 
     lh x2, 0(x1)
@@ -28,8 +28,13 @@ _boot:
     li x17, 1
     sw x17, 0(x16)
 
-.data
+.section .tohost
+    .align 6
+    .global tohost
+tohost: 
+    .dword 0
+
+.section .data
 variable: 
-    tohost:     .dword  0
     testvar:    .word   0xdeadbeef
     dest:       .word   0x0
