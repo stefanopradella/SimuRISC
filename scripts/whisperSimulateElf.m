@@ -45,7 +45,8 @@ function simulationOutput = whisperSimulateElf(NameValueArgs)
     end
 
     % Simulate elf file the first time to get the number of instructions
-    [~, response] = system(strcat("whisper ", elfFilePath, " --configfile ", whisperConfigFilePath));
+    cmd = strcat("env -u LD_LIBRARY_PATH whisper ", elfFilePath, " --configfile ", whisperConfigFilePath);
+    [~, response] = system(cmd);
     responseRows = splitlines(string(response));
 
     nInstructions = sscanf(responseRows(2), "Executed %d");
@@ -55,8 +56,9 @@ function simulationOutput = whisperSimulateElf(NameValueArgs)
     % Simulate elf file and save status after last instruction
     % -1 is because the last instruction writes to the .tohost variable to
     % terminate the execution
-    [ret, out] = system(strcat("whisper ", elfFilePath, " --snapshotperiod ", num2str(nInstructions-1), " --snapshotdir ", ...
-        filepath, "/snapshot --configfile ", whisperConfigFilePath));
+    cmd = strcat("env -u LD_LIBRARY_PATH whisper ", elfFilePath, " --snapshotperiod ", num2str(nInstructions-1), " --snapshotdir ", ...
+        filepath, "/snapshot --configfile ", whisperConfigFilePath);
+    [ret, out] = system(cmd);
 
     vprintf(printOutput, "%s\n", out)
 
