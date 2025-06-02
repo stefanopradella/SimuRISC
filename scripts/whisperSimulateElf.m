@@ -104,23 +104,27 @@ function simulationOutput = whisperSimulateElf(NameValueArgs)
     memoryPointer = 1;
     memoryBlocksInfo_keys = memoryBlocksInfo.keys();
     for iBlock = 1:memoryBlocksInfo.numEntries
-        memoryOffset = memoryBlocksInfo_keys(iBlock);
-        sectionName = memoryLocations(memoryOffset);
-        
-        textSectionArraySize = str2double(memoryBlocksInfo(memoryOffset))/(SimuRISC_Constants.XLEN/8);
-        dataSectionArraySize = str2double(memoryBlocksInfo(memoryOffset))/(SimuRISC_Constants.XLEN/8);
-
-        switch sectionName
-            case ".text"
-                vprintf(printOutput, 'Extracting .text memory dump...')
-                simulationOutput.codeMemory(textSectionBaseIndex+1:textSectionBaseIndex+textSectionArraySize) = bytesToWords(memoryDump(memoryPointer: memoryPointer+textSectionArraySize-1, :));
-                memoryPointer = memoryPointer + str2double(memoryBlocksInfo(memoryOffset))/4;
-            case ".data"
-                vprintf(printOutput, 'Extracting .data memory dump...')
-                simulationOutput.dataMemory(dataSectionBaseIndex+1:dataSectionBaseIndex+dataSectionArraySize) = bytesToWords(memoryDump(memoryPointer: memoryPointer+dataSectionArraySize-1, :));
-                memoryPointer = memoryPointer + str2double(memoryBlocksInfo(memoryOffset))/4;
-            otherwise
-                vprintf(printOutput, 'Unrecognized section: %s, ignoring...', sectionName)
+        try
+            memoryOffset = memoryBlocksInfo_keys(iBlock);
+            sectionName = memoryLocations(memoryOffset);
+            
+            textSectionArraySize = str2double(memoryBlocksInfo(memoryOffset))/(SimuRISC_Constants.XLEN/8);
+            dataSectionArraySize = str2double(memoryBlocksInfo(memoryOffset))/(SimuRISC_Constants.XLEN/8);
+    
+            switch sectionName
+                case ".text"
+                    vprintf(printOutput, 'Extracting .text memory dump...')
+                    simulationOutput.codeMemory(textSectionBaseIndex+1:textSectionBaseIndex+textSectionArraySize) = bytesToWords(memoryDump(memoryPointer: memoryPointer+textSectionArraySize-1, :));
+                    memoryPointer = memoryPointer + str2double(memoryBlocksInfo(memoryOffset))/4;
+                case ".data"
+                    vprintf(printOutput, 'Extracting .data memory dump...')
+                    simulationOutput.dataMemory(dataSectionBaseIndex+1:dataSectionBaseIndex+dataSectionArraySize) = bytesToWords(memoryDump(memoryPointer: memoryPointer+dataSectionArraySize-1, :));
+                    memoryPointer = memoryPointer + str2double(memoryBlocksInfo(memoryOffset))/4;
+                otherwise
+                    vprintf(printOutput, 'Unrecognized section: %s, ignoring...', sectionName)
+            end
+        catch ME
+            fprintf('Exception reading memory offset %s, skipping...\n', memoryOffset)
         end
     end
 

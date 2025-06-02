@@ -13,7 +13,11 @@ _boot:
     xor x6, x1, x2
     xori x7, x2, 0xef
     ori x8, x2, 0xef
-    andi x9, x2, 0xef
+    andi x9, x2, 0xab
+    slt x10, x2, x1;
+    sltu x11, x1, x2;
+    slti x12, x2, 0xef;
+    sltiu x13, x9, 0xef;
 
     la x1, dest 
     sb x2, 0(x1)
