@@ -89,6 +89,7 @@ function simulationOutput = whisperSimulateElf(NameValueArgs)
         elseif regexp(registerDumpFile(iLine), "pc\s")
             lineSplit = split(registerDumpFile(iLine));
             simulationOutput.pc = hex2dec(lineSplit(2));
+        elseif regexp(registerDumpFile(iLine), "c\s\d+\s")
         end
 
     end
