@@ -66,7 +66,7 @@ function [instructionMemory, dataMemory, elfExtras] = parseELFFile(filename, pri
     e_version = reshape(dec2hex(fread(fileId, 1, '*ubit32', endianness))', 1, []);
 
     e_entry = reshape(dec2hex(fread(fileId, 1, formatVarType, endianness))', 1, []);
-    elfExtras.entryPointAddress = hex2dec(e_entry) - SimuRISC_Constants.RAM_BASE_ADDR;
+    elfExtras.entryPointAddress = hex2dec(e_entry);
     e_phoff = reshape(dec2hex(fread(fileId, 1, formatVarType, endianness))', 1, []);
     e_shoff = reshape(dec2hex(fread(fileId, 1, formatVarType, endianness))', 1, []);
     e_flags = reshape(dec2hex(fread(fileId, 1, '*ubit32', endianness))', 1, []);

@@ -2,11 +2,11 @@ clear;
 close all;
 bdclose all;
 
-testList = ["subset_v0_2_part3", ...
+testList = ["cleanExit", ...
+            "subset_v0_2_part3", ...
             "subset_v0_2_part2", ...
             "subset_v0_2_part1", ...
             "subset_v0_1", ...
-            "cleanExit", ...
             "memoryReadWrite", ...
     ];
 
@@ -19,8 +19,18 @@ fprintf("Done!\n");
 
 for iTest = 1:numel(testList)
     testName = char(testList(iTest));
+    testFolderPath = char(strcat(getProjectRoot(), filesep, "tests", filesep, testName));
+    sourceFilePath = [testFolderPath filesep testName '.s'];
+    elfFilePath = [testFolderPath filesep testName '.elf'];
 
+    % Compile test code
+    compileSW('SourceFilePath', sourceFilePath);
+    
+    startTime = datetime('now');
 
+    % Run test on model
+    modelOutput = runTestCase("ElfFilePath", elfFilePath);
+    
     % Simulate test and get RAM dump
     simulationOutput = whisperSimulateElf("ElfFilePath", elfFilePath);
 
@@ -30,6 +40,8 @@ for iTest = 1:numel(testList)
     assert(isequal(simulationOutput.registerFile, modelOutput.registerFile));
     status = 'PASSED';
 
+    endTime = datetime('now');
+    
     printTestSummary(testName, status, startTime, endTime)
 end
 

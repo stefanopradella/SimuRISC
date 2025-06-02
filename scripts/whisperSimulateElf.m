@@ -98,33 +98,58 @@ function simulationOutput = whisperSimulateElf(NameValueArgs)
     simulationOutput.codeMemory = uint32(zeros(2^SimuRISC_Constants.ADDR_BUS_WIDTH/(SimuRISC_Constants.XLEN/8), 1));
     simulationOutput.dataMemory = uint32(zeros(2^SimuRISC_Constants.ADDR_BUS_WIDTH/(SimuRISC_Constants.XLEN/8), 1));
 
-    textSectionBaseIndex = textSectionBaseAddr / (SimuRISC_Constants.XLEN/8);
-    dataSectionBaseIndex = dataSectionBaseAddr / (SimuRISC_Constants.XLEN/8);
-
+    textSectionBaseIndex = (textSectionBaseAddr - SimuRISC_Constants.RAM_BASE_ADDR) / (SimuRISC_Constants.XLEN/8);
+    dataSectionBaseIndex = (dataSectionBaseAddr - SimuRISC_Constants.RAM_BASE_ADDR) / (SimuRISC_Constants.XLEN/8);
+    
     memoryPointer = 1;
     memoryBlocksInfo_keys = memoryBlocksInfo.keys();
+
+    memoryLocations_keys = memoryLocations.keys();
+
     for iBlock = 1:memoryBlocksInfo.numEntries
         try
-            memoryOffset = memoryBlocksInfo_keys(iBlock);
-            sectionName = memoryLocations(memoryOffset);
-            
-            textSectionArraySize = str2double(memoryBlocksInfo(memoryOffset))/(SimuRISC_Constants.XLEN/8);
-            dataSectionArraySize = str2double(memoryBlocksInfo(memoryOffset))/(SimuRISC_Constants.XLEN/8);
-    
-            switch sectionName
-                case ".text"
-                    vprintf(printOutput, 'Extracting .text memory dump...')
-                    simulationOutput.codeMemory(textSectionBaseIndex+1:textSectionBaseIndex+textSectionArraySize) = bytesToWords(memoryDump(memoryPointer: memoryPointer+textSectionArraySize-1, :));
-                    memoryPointer = memoryPointer + str2double(memoryBlocksInfo(memoryOffset))/4;
-                case ".data"
-                    vprintf(printOutput, 'Extracting .data memory dump...')
-                    simulationOutput.dataMemory(dataSectionBaseIndex+1:dataSectionBaseIndex+dataSectionArraySize) = bytesToWords(memoryDump(memoryPointer: memoryPointer+dataSectionArraySize-1, :));
-                    memoryPointer = memoryPointer + str2double(memoryBlocksInfo(memoryOffset))/4;
-                otherwise
-                    vprintf(printOutput, 'Unrecognized section: %s, ignoring...', sectionName)
+            memoryBlockStartOffset = str2double(memoryBlocksInfo_keys(iBlock));
+            memoryBlockLength = str2double(memoryBlocksInfo(memoryBlockStartOffset));
+            memoryBlockEndOffset = memoryBlockStartOffset + memoryBlockLength;
+
+            % For each memory block, check if the code section is inside
+            % that block
+            for iSection = 1:memoryLocations.numEntries
+                sectionAddress_key = memoryLocations_keys(iSection);
+                sectionStartAddress = str2double(sectionAddress_key);
+
+                if iSection < memoryLocations.numEntries
+                    % this means that there is another section ahead in
+                    % memory
+                    sectionAddress_key_next = memoryLocations_keys(iSection+1);
+                    sectionStartAddress_next = str2double(sectionAddress_key_next);
+                    sectionEndAddress = sectionStartAddress_next - (SimuRISC_Constants.XLEN/8);
+                else
+                    % This is the last section
+                    sectionEndAddress = memoryBlockEndOffset;
+                end
+                
+                if (sectionStartAddress >= memoryBlockStartOffset && sectionEndAddress <= memoryBlockEndOffset)
+                    sectionArraySize = (memoryBlockEndOffset-sectionStartAddress)/(SimuRISC_Constants.XLEN/8);
+                    
+                    sectionName = memoryLocations(sectionAddress_key);
+
+                    sectionStartOffsetInBlock = (sectionStartAddress - memoryBlockStartOffset)/(SimuRISC_Constants.XLEN/8) + 1;
+
+                    switch sectionName
+                        case ".text"
+                            vprintf(printOutput, 'Extracting .text memory dump...')
+                            simulationOutput.codeMemory(textSectionBaseIndex+1:textSectionBaseIndex+sectionArraySize) = bytesToWords(memoryDump(sectionStartOffsetInBlock: sectionStartOffsetInBlock+sectionArraySize-1, :));
+                        case ".data"
+                            vprintf(printOutput, 'Extracting .data memory dump...')
+                            simulationOutput.dataMemory(dataSectionBaseIndex+1:dataSectionBaseIndex+sectionArraySize) = bytesToWords(memoryDump(sectionStartOffsetInBlock: sectionStartOffsetInBlock+sectionArraySize-1, :));
+                        otherwise
+                            vprintf(printOutput, 'Unrecognized section: %s, ignoring...', sectionName)
+                    end
+                end
             end
         catch ME
-            fprintf('Exception reading memory offset %s, skipping...\n', memoryOffset)
+            fprintf('Exception reading memory offset %s, skipping...\n', memoryBlockStartOffset)
         end
     end
 
@@ -132,6 +157,6 @@ function simulationOutput = whisperSimulateElf(NameValueArgs)
     % account of the last instruction which is not dumped
 
     [~, ~, elfExtras] = parseELFFile(elfFilePath);
-    simulationOutput.dataMemory(hex2dec(elfExtras.tohostVarInfo.address) /(SimuRISC_Constants.XLEN/8) + 1) = 1;
+    simulationOutput.dataMemory(elfExtras.tohostVarInfo.address /(SimuRISC_Constants.XLEN/8) + 1) = 1;
 
 end
