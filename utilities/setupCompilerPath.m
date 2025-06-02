@@ -1,5 +1,7 @@
-[~,result]=system('echo -n $PATH');
-if ~contains(result, SimuRISC_Environment.RISCV_COMPILER_PATH)
-    setenv('PATH',[result ':' SimuRISC_Environment.RISCV_COMPILER_PATH])
+[~,systemPath]=system('echo -n $PATH');
+[~,compilerPath]=system(['echo ' SimuRISC_Environment.RISCV_COMPILER_PATH]);
+compilerPath = strip(compilerPath);
+if ~contains(systemPath, compilerPath)
+    setenv('PATH',[compilerPath ':' systemPath])
 end
-clear result
+clear systemPath simulatorPath
