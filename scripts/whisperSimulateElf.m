@@ -22,23 +22,25 @@ function simulationOutput = whisperSimulateElf(NameValueArgs)
     whisperConfigFilePath = NameValueArgs.WhisperConfigFilePath;
     printOutput = NameValueArgs.PrintOutput;
 
-    % Get the size of the code section and the offset of the data section
+    % Get information about the .text and the .data sections
     [~, cmdout] = system(strcat("riscv64-unknown-elf-objdump -h ", elfFilePath));
     cmdout = splitlines(string(cmdout));
 
-    memoryLocations = dictionary();
+    memoryBaseAddrList = table();
     for iLine = 1:numel(cmdout)
+        newEntry = [];
         if regexp(cmdout(iLine), "\s+\d+\s+\.text(?:\.init)?\s+")
-            lineSplit = split(cmdout(iLine));
-            nInstructions = hex2dec(lineSplit(4))/4;                        % TODO parametric instruction length (maybe with a constant)
-            textSectionBaseAddr = hex2dec(lineSplit(5));
-            memoryLocations(string(textSectionBaseAddr)) = ".text";
+            newEntry.ID = ".text";
         end
         if regexp(cmdout(iLine), "\s+\d+\s+\.data\s+")
+            newEntry.ID = ".data";
+        end
+
+        if isfield(newEntry, "ID")
             lineSplit = split(cmdout(iLine));
-            dataSectionSize = hex2dec(lineSplit(4))/4; 
-            dataSectionBaseAddr = hex2dec(lineSplit(5));                    % TODO parametric instruction length (maybe with a constant)
-            memoryLocations(string(dataSectionBaseAddr)) = ".data";
+            newEntry.StartAddr = lineSplit(5);
+            newEntry.Size = lineSplit(4);
+            memoryBaseAddrList = [memoryBaseAddrList; struct2table(newEntry)];
         end
     end
 
@@ -68,7 +70,7 @@ function simulationOutput = whisperSimulateElf(NameValueArgs)
     for iLine = 1:numel(memoryBlocks)
         if memoryBlocks(iLine) ~= ""
             tmp = split(memoryBlocks(iLine));
-            memoryBlocksInfo(tmp(1)) = tmp(2);
+            memoryBlocksInfo(dec2hex(str2double(tmp(1)))) = tmp(2);
         end
     end
 
@@ -92,69 +94,59 @@ function simulationOutput = whisperSimulateElf(NameValueArgs)
     % Read memory status from snapshot
     movefile(strcat(filepath, "/snapshot0/memory"), strcat(filepath, "/snapshot0/memory.gz"))
     system(strcat("gzip -dk ", filepath, "/snapshot0/memory"));
-    memoryDump = loadMemory(strcat(filepath, "/snapshot0/memory"));
+    memoryDumpData = bytesToWords(loadMemory(strcat(filepath, "/snapshot0/memory")));
     
     % Extracting memory dump
     simulationOutput.codeMemory = uint32(zeros(2^SimuRISC_Constants.ADDR_BUS_WIDTH/(SimuRISC_Constants.XLEN/8), 1));
     simulationOutput.dataMemory = uint32(zeros(2^SimuRISC_Constants.ADDR_BUS_WIDTH/(SimuRISC_Constants.XLEN/8), 1));
 
-    textSectionBaseIndex = (textSectionBaseAddr - SimuRISC_Constants.RAM_BASE_ADDR) / (SimuRISC_Constants.XLEN/8);
+    textSectionBaseIndex = (hex2dec(memoryBaseAddrList{memoryBaseAddrList.ID == ".text", "StartAddr"}) - SimuRISC_Constants.RAM_BASE_ADDR) / (SimuRISC_Constants.XLEN/8);
 
-    if exist('dataSectionBaseAddr', 'var')
-        dataSectionBaseIndex = (dataSectionBaseAddr - SimuRISC_Constants.RAM_BASE_ADDR) / (SimuRISC_Constants.XLEN/8);
+    if ~isempty(memoryBaseAddrList(memoryBaseAddrList.ID == ".data", :))
+        dataSectionBaseIndex = (hex2dec(memoryBaseAddrList{memoryBaseAddrList.ID == ".data", "StartAddr"}) - SimuRISC_Constants.RAM_BASE_ADDR) / (SimuRISC_Constants.XLEN/8);
     else
         dataSectionBaseIndex = 0;
     end
     
-    memoryPointer = 1;
     memoryBlocksInfo_keys = memoryBlocksInfo.keys();
+    memoryBaseAddrList_keys = memoryBaseAddrList.StartAddr(:);
 
-    memoryLocations_keys = memoryLocations.keys();
-
+    programMemoryArraySize = (hex2dec(memoryBlocksInfo_keys(end)) - SimuRISC_Constants.RAM_BASE_ADDR) + (str2double(memoryBlocksInfo(memoryBlocksInfo_keys(end)))/4);
+    programMemory = uint32(zeros(programMemoryArraySize, 1));
     for iBlock = 1:memoryBlocksInfo.numEntries
-        try
-            memoryBlockStartOffset = str2double(memoryBlocksInfo_keys(iBlock));
-            memoryBlockLength = str2double(memoryBlocksInfo(memoryBlockStartOffset));
-            memoryBlockEndOffset = memoryBlockStartOffset + memoryBlockLength;
+        % Get start and end address of the dumped memory block
+        memoryBlockStartAddr = hex2dec(memoryBlocksInfo_keys(iBlock)) - SimuRISC_Constants.RAM_BASE_ADDR;
+        memoryBlockLength = str2double(memoryBlocksInfo(memoryBlocksInfo_keys(iBlock)));
+        memoryBlockEndAddr = memoryBlockStartAddr + memoryBlockLength;
+        memoryBlockStartIdx = (memoryBlockStartAddr/4)+1;
+        memoryBlockEndIdx = memoryBlockEndAddr/4;
+        
+        % Get the index of such block in the memory dump data
+        dumpBlockStartIdx = ((iBlock-1)*(memoryBlockLength/4))+1;
+        dumpBlockEndIdx = dumpBlockStartIdx+(memoryBlockLength/4)-1;
 
-            % For each memory block, check if the code section is inside
-            % that block
-            for iSection = 1:memoryLocations.numEntries
-                sectionAddress_key = memoryLocations_keys(iSection);
-                sectionStartAddress = str2double(sectionAddress_key);
+        % Load data from the memory dump into the program memory array
+        programMemory(memoryBlockStartIdx:memoryBlockEndIdx) = memoryDumpData(dumpBlockStartIdx:dumpBlockEndIdx);
 
-                if iSection < memoryLocations.numEntries
-                    % this means that there is another section ahead in
-                    % memory
-                    sectionAddress_key_next = memoryLocations_keys(iSection+1);
-                    sectionStartAddress_next = str2double(sectionAddress_key_next);
-                    sectionEndAddress = sectionStartAddress_next - (SimuRISC_Constants.XLEN/8);
-                else
-                    % This is the last section
-                    sectionEndAddress = memoryBlockEndOffset;
-                end
-                
-                if (sectionStartAddress >= memoryBlockStartOffset && sectionEndAddress <= memoryBlockEndOffset)
-                    sectionArraySize = (memoryBlockEndOffset-sectionStartAddress)/(SimuRISC_Constants.XLEN/8);
-                    
-                    sectionName = memoryLocations(sectionAddress_key);
+    end
 
-                    sectionStartOffsetInBlock = (sectionStartAddress - memoryBlockStartOffset)/(SimuRISC_Constants.XLEN/8) + 1;
+    % Split the program memory into text and data memory
+    for iSection = 1:numel(memoryBaseAddrList_keys)
+        sectionAddress_key = memoryBaseAddrList_keys(iSection);
+        sectionID = memoryBaseAddrList{memoryBaseAddrList.StartAddr == sectionAddress_key, "ID"};
 
-                    switch sectionName
-                        case ".text"
-                            vprintf(printOutput, 'Extracting .text memory dump...')
-                            simulationOutput.codeMemory(textSectionBaseIndex+1:textSectionBaseIndex+sectionArraySize) = bytesToWords(memoryDump(sectionStartOffsetInBlock: sectionStartOffsetInBlock+sectionArraySize-1, :));
-                        case ".data"
-                            vprintf(printOutput, 'Extracting .data memory dump...')
-                            simulationOutput.dataMemory(dataSectionBaseIndex+1:dataSectionBaseIndex+sectionArraySize) = bytesToWords(memoryDump(sectionStartOffsetInBlock: sectionStartOffsetInBlock+sectionArraySize-1, :));
-                        otherwise
-                            vprintf(printOutput, 'Unrecognized section: %s, ignoring...', sectionName)
-                    end
-                end
-            end
-        catch ME
-            fprintf('Exception reading memory offset %s, skipping...\n', memoryBlockStartOffset)
+        switch sectionID
+            case ".text"
+                vprintf(printOutput, 'Extracting .text memory dump...\n')
+                textSectionArraySize = hex2dec(memoryBaseAddrList{memoryBaseAddrList.ID == ".text", "Size"})/4;
+                textSectionArrayStart = ((hex2dec(sectionAddress_key) - SimuRISC_Constants.RAM_BASE_ADDR)/4)+1;
+                simulationOutput.codeMemory(textSectionBaseIndex+1:textSectionBaseIndex+textSectionArraySize) = programMemory(textSectionArrayStart:textSectionArrayStart+textSectionArraySize-1, :);
+            case ".data"
+                vprintf(printOutput, 'Extracting .data memory dump...\n')
+                dataSectionArrayStart = ((hex2dec(sectionAddress_key) - SimuRISC_Constants.RAM_BASE_ADDR)/4)+1;
+                simulationOutput.dataMemory(dataSectionBaseIndex+1:dataSectionBaseIndex+(SimuRISC_Constants.DATA_SECTION_MAX_SIZE/4)) = programMemory(dataSectionArrayStart:dataSectionArrayStart+(SimuRISC_Constants.DATA_SECTION_MAX_SIZE/4)-1, :);
+            otherwise
+                vprintf(printOutput, 'Unrecognized section: %s, ignoring...\n', sectionID)
         end
     end
 

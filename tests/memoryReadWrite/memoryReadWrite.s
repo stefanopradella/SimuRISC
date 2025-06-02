@@ -1,7 +1,7 @@
-.global _boot
-.text
+.global _start
+.section .text.init
 
-_boot:
+_start:
     lw x1, src1
     lw x2, src2
     lw x3, src3
@@ -14,9 +14,14 @@ _boot:
     li x2, 1
     sw x2, 0(x1)
 
-.data
+.section .tohost
+    .align 6
+    .global tohost
+tohost: 
+    .dword 0
+
+.section .data
 variable:
-    tohost:     .dword 0
     src1:       .word 7
     src2:       .word 8
     src3:       .word 9

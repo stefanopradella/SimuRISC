@@ -7,5 +7,6 @@ classdef SimuRISC_Constants
         ARCH                        =   'rv32i';
         ABI                         =   'ilp32';
         RAM_BASE_ADDR               =   hex2dec('80000000');
+        DATA_SECTION_MAX_SIZE       =   hex2dec('1000');
     end
 end
