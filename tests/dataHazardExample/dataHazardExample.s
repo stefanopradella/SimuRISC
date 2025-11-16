@@ -21,6 +21,18 @@ _start:
     lw x3, 4(x0)
     sw x3, 8(x0)
 
+    # Pipeline stall
+
+    lw x5, 4(x0)
+    and x6, x5, x1
+
+    # Branch hazard
+    bne x1, x3, exit
+    li x1, 0
+    li x2, 0
+    li x3, 0
+
+exit:
     la x1, tohost
     li x2, 1
     sw x2, 0(x1)
