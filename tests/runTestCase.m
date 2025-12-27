@@ -3,6 +3,7 @@ function modelOutput = runTestCase(NameValueArgs)
     arguments
         NameValueArgs.ElfFilePath (1,1) string = ''
         NameValueArgs.StartSection (1,1) string = ''
+        NameValueArgs.StopCondition (1,1) string = ''
     end
 
     if strcmp(NameValueArgs.ElfFilePath, "")
@@ -31,6 +32,9 @@ function modelOutput = runTestCase(NameValueArgs)
     simIn = setVariable(simIn,'dataMemory',modelInput.dataMemory);
     simIn = setVariable(simIn,'entryPointAddress',modelInput.entryPointAddress);
     simIn = setVariable(simIn,'tohost_address',modelInput.tohost_address);
+    if ~isempty(NameValueArgs.StopCondition)
+        simIn = setVariable(simIn,'modelStopCondition',NameValueArgs.StopCondition);
+    end
 
     warning('off');                 % Turning off as the intended wrap on overflow will issue a warning
     simOut = sim(simIn);
