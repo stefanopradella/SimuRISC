@@ -30,7 +30,8 @@ classdef RunBuiltinTests < matlab.unittest.TestCase
         function testExecution(testCase)
 
             % Run test on model
-            modelOutput = runTestCase("ElfFilePath", testCase.elfFilePath);
+            modelOutput = runTestCase("ElfFilePath", testCase.elfFilePath, ...
+                "StopCondition", "tohost");
         
             % Simulate test and get RAM dump
             simulationOutput = whisperSimulateElf("ElfFilePath", testCase.elfFilePath);
