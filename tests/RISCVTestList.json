@@ -1,0 +1,6 @@
+{
+    "TVMs": {
+        "rv32ui": ["add"]
+    },
+    "TargetEnvironments": ["p"]
+}
