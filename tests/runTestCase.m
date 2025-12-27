@@ -2,6 +2,7 @@ function modelOutput = runTestCase(NameValueArgs)
 % TODO Description
     arguments
         NameValueArgs.ElfFilePath (1,1) string = ''
+        NameValueArgs.StartSection (1,1) string = ''
     end
 
     if strcmp(NameValueArgs.ElfFilePath, "")
@@ -14,7 +15,14 @@ function modelOutput = runTestCase(NameValueArgs)
 
     [modelInput.instructionMemory, modelInput.dataMemory, elfExtras] = parseELFFile(elfFilePath);
     
-    modelInput.entryPointAddress = elfExtras.entryPointAddress;
+    if strcmp(NameValueArgs.StartSection, "")
+        modelInput.entryPointAddress = elfExtras.entryPointAddress;
+    else
+        % Find the entry in symbol table and load the address of the
+        % section
+        modelInput.entryPointAddress = hex2dec(elfExtras.symbolTable.st_value(strcmp(elfExtras.symbolTable.symbolName,NameValueArgs.StartSection)));
+    end
+    
     modelInput.tohost_address = elfExtras.tohostVarInfo.address;
 
     % Set simulation inputs
