@@ -131,7 +131,7 @@ function [instructionMemory, dataMemory, elfExtras] = parseELFFile(filename, pri
         sh_addralign(iSHeader) = reshape(dec2hex(fread(fileId, 1, formatVarType, endianness))', 1, []);
         sh_entsize(iSHeader) = reshape(dec2hex(fread(fileId, 1, formatVarType, endianness))', 1, []);
     end
-    sectionHeader  = table(sh_name,sh_type,sh_flags,sh_addr,sh_offset,sh_size,sh_link,sh_info,sh_addralign,sh_entsize);
+    sectionHeader = table(sh_name,sh_type,sh_flags,sh_addr,sh_offset,sh_size,sh_link,sh_info,sh_addralign,sh_entsize);
 
     % Look in .shstrtab for the section name
     fseek(fileId,hex2dec(sectionHeader{hex2dec(e_shstrndx)+1,"sh_offset"}),'bof');
@@ -162,38 +162,58 @@ function [instructionMemory, dataMemory, elfExtras] = parseELFFile(filename, pri
     fseek(fileId,hex2dec(sectionHeader{".strtab","sh_offset"}),'bof');
     strtab = char(fread(fileId, hex2dec(sectionHeader{".strtab","sh_size"})))';
 
-    % TODO: implement complete parsing of symbols table, different between
-    % 32 and 64 bit ELFs
+    % Symbol table parsing
     if contains(strtab, 'tohost')
         fseek(fileId,hex2dec(sectionHeader{".symtab","sh_offset"}),'bof');
         nEntries = hex2dec(sectionHeader{".symtab","sh_size"})/hex2dec(sectionHeader{".symtab","sh_entsize"});
 
-        for i = 1:nEntries
+        % Initialize table
+        st_name = strings(nEntries, 1);
+        st_value = strings(nEntries, 1);
+        st_size = strings(nEntries, 1);
+        st_info = strings(nEntries, 1);
+        st_other = strings(nEntries, 1);
+        st_shndx = strings(nEntries, 1);
+        symbolName = strings(nEntries, 1);
 
+        for iEntry = 1:nEntries
             % Extract fields
-            st_name = reshape(dec2hex(fread(fileId, 1, '*ubit32', endianness))', 1, []);
-            st_value = reshape(dec2hex(fread(fileId, 1, formatVarType, endianness))', 1, []);
-            st_size = reshape(dec2hex(fread(fileId, 1, formatVarType, endianness))', 1, []);
-            st_info = dec2hex(fread(fileId, 1));
-            st_other = dec2hex(fread(fileId, 1));
-            st_shndx = reshape(dec2hex(fread(fileId, 1, '*ubit16', endianness))', 1, []);
-
+            switch format
+                case '32-bit'
+                    st_name(iEntry) = reshape(dec2hex(fread(fileId, 1, formatVarType, endianness))', 1, []);
+                    st_value(iEntry) = reshape(dec2hex(fread(fileId, 1, formatVarType, endianness))', 1, []);
+                    st_size(iEntry) = reshape(dec2hex(fread(fileId, 1, formatVarType, endianness))', 1, []);
+                    st_info(iEntry) = dec2hex(fread(fileId, 1));
+                    st_other(iEntry) = dec2hex(fread(fileId, 1));
+                    st_shndx(iEntry) = reshape(dec2hex(fread(fileId, 1, '*ubit16', endianness))', 1, []);
+                case '64-bit'
+                    st_name(iEntry) = reshape(dec2hex(fread(fileId, 1, formatVarType, endianness))', 1, []);
+                    st_info(iEntry) = dec2hex(fread(fileId, 1));
+                    st_other(iEntry) = dec2hex(fread(fileId, 1));
+                    st_shndx(iEntry) = reshape(dec2hex(fread(fileId, 1, '*ubit32', endianness))', 1, []);
+                    st_value(iEntry) = reshape(dec2hex(fread(fileId, 1, formatVarType, endianness))', 1, []);
+                    st_size(iEntry) = reshape(dec2hex(fread(fileId, 1, formatVarType, endianness))', 1, []);
+            end
+            
             % Get symbol name from .strtab
-            nameIdx = hex2dec(st_name);
+            nameIdx = hex2dec(st_name(iEntry));
             if nameIdx > 0
                 strtab_split = split(strtab(nameIdx+1:end), char(0));
-                symbolName = strtab_split{1};
-                if isempty(symbolName)
-                    symbolName = '<no name>';
+                symbolName(iEntry) = strtab_split{1};
+                if isempty(symbolName(iEntry))
+                    symbolName(iEntry) = '<no name>';
                 end
             else
-                symbolName = '<no name>';
+                symbolName(iEntry) = '<no name>';
             end
 
-            if strcmp(symbolName, 'tohost')
-                elfExtras.tohostVarInfo.address = hex2dec(st_value) - SimuRISC_Constants.RAM_BASE_ADDR;
+            if strcmp(symbolName(iEntry), 'tohost')
+                elfExtras.tohostVarInfo.address = hex2dec(st_value(iEntry)) - SimuRISC_Constants.RAM_BASE_ADDR;
             end
         end
+    
+        symbolTable = table(symbolName,st_name,st_value,st_size,st_info,st_other,st_shndx);
+        elfExtras.symbolTable = symbolTable;
     end
 
     % Reading .text section
