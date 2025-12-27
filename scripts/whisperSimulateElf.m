@@ -78,7 +78,7 @@ function simulationOutput = whisperSimulateElf(NameValueArgs)
 
 
     % Read GP registers and CSR status from snapshot
-    simulationOutput.registerFile = zeros(1, 32);
+    simulationOutput.registerFile = uint32(zeros(1, 32));
     simulationOutput.CSR = zeros(1, size(SimuRISC_Constants.CSR_LUT, 1));
     simulationOutput.pc = 0;
 
@@ -87,7 +87,7 @@ function simulationOutput = whisperSimulateElf(NameValueArgs)
         lineText = registerDumpFile(iLine);
         lineSplit = split(lineText);
         if regexp(lineText, "x\s\d+")
-            simulationOutput.registerFile(str2double(lineSplit(2))+1) = hex2dec(lineSplit(3));
+            simulationOutput.registerFile(str2double(lineSplit(2))+1) = uint32(hex2dec(lineSplit(3)));
         elseif regexp(lineText, "pc\s")
             simulationOutput.pc = hex2dec(lineSplit(2));
         elseif regexp(lineText, "c\s\d+")
