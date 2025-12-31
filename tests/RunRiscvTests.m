@@ -54,6 +54,13 @@ classdef RunRiscvTests < matlab.unittest.TestCase
         elfFilePath;
     end
 
+    methods (TestClassSetup)
+        function printCommitHash(testCase)
+            [~, hash] = system('git rev-parse HEAD');
+            disp("Commit hash: "+string(strip(hash)));
+        end
+    end
+
     methods (TestMethodSetup)
         function getFilePath(testCase, TVMName, targetEnvironment, testName)
             testFolderPath = strcat(SimuRISC_Environment.RISCV_TESTS_PATH, filesep, "isa");
