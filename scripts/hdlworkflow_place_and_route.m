@@ -39,6 +39,9 @@ load_system('SimuRISC');
 hdlset_param('SimuRISC/rst', 'IOInterface', 'External Port');
 hdlset_param('SimuRISC/rst', 'IOInterfaceMapping', '');
 
+% Set Outport HDL parameters
+hdlset_param('SimuRISC/numRetiredInstructions', 'IOInterface', 'External Port');
+hdlset_param('SimuRISC/numRetiredInstructions', 'IOInterfaceMapping', '');
 
 %% Workflow Configuration Settings
 % Construct the Workflow Configuration Object with default settings
