@@ -32,4 +32,4 @@ CSRInitialValue(SimuRISC_Constants.CSR_LUT(:, 1) == hex2dec('300'))         =   
 
 
 %% Simulation time limit
-simMaxTime                      =   1e3/clockFrequency;
+simMaxTime                      =   1e4/clockFrequency;
