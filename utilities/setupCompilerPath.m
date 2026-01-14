@@ -4,4 +4,4 @@ compilerPath = strip(compilerPath);
 if ~contains(systemPath, compilerPath)
     setenv('PATH',[compilerPath ':' systemPath])
 end
-clear systemPath simulatorPath
+clear systemPath simulatorPath compilerPath
