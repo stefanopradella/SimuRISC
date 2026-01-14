@@ -113,6 +113,7 @@ Target Frequency: 50 MHz
 | DSPs            | 0     | 220       | 0               |
 | Block RAM Tile  | 32    | 140       | 22.86           |
 | URAM            | 0     | 0         | 0               |
+
 Maximum clock frequency: 46.29 MHz
 ## Extension Support
 
