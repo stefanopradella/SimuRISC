@@ -104,8 +104,7 @@ function simulationOutput = whisperSimulateElf(NameValueArgs)
     memoryDumpData = bytesToWords(loadMemory(strcat(filepath, "/snapshot0/memory")));
     
     % Extracting memory dump
-    simulationOutput.codeMemory = uint32(zeros(2^SimuRISC_Constants.ADDR_BUS_WIDTH/(SimuRISC_Constants.XLEN/8), 1));
-    simulationOutput.dataMemory = uint32(zeros(2^SimuRISC_Constants.ADDR_BUS_WIDTH/(SimuRISC_Constants.XLEN/8), 1));
+    simulationOutput.memoryData = uint32(zeros(2^SimuRISC_Constants.ADDR_BUS_WIDTH/(SimuRISC_Constants.XLEN/8), 1));
 
     textSectionBaseIndex = (hex2dec(memoryBaseAddrList{memoryBaseAddrList.ID == ".text", "StartAddr"}) - SimuRISC_Constants.RAM_BASE_ADDR) / (SimuRISC_Constants.XLEN/8);
 
@@ -147,11 +146,11 @@ function simulationOutput = whisperSimulateElf(NameValueArgs)
                 vprintf(printOutput, 'Extracting .text memory dump...\n')
                 textSectionArraySize = hex2dec(memoryBaseAddrList{memoryBaseAddrList.ID == ".text", "Size"})/4;
                 textSectionArrayStart = ((hex2dec(sectionAddress_key) - SimuRISC_Constants.RAM_BASE_ADDR)/4)+1;
-                simulationOutput.codeMemory(textSectionBaseIndex+1:textSectionBaseIndex+textSectionArraySize) = programMemory(textSectionArrayStart:textSectionArrayStart+textSectionArraySize-1, :);
+                simulationOutput.memoryData(textSectionBaseIndex+1:textSectionBaseIndex+textSectionArraySize) = programMemory(textSectionArrayStart:textSectionArrayStart+textSectionArraySize-1, :);
             case ".data"
                 vprintf(printOutput, 'Extracting .data memory dump...\n')
                 dataSectionArrayStart = ((hex2dec(sectionAddress_key) - SimuRISC_Constants.RAM_BASE_ADDR)/4)+1;
-                simulationOutput.dataMemory(dataSectionBaseIndex+1:dataSectionBaseIndex+(SimuRISC_Constants.DATA_SECTION_MAX_SIZE/4)) = programMemory(dataSectionArrayStart:dataSectionArrayStart+(SimuRISC_Constants.DATA_SECTION_MAX_SIZE/4)-1, :);
+                simulationOutput.memoryData(dataSectionBaseIndex+1:dataSectionBaseIndex+(SimuRISC_Constants.DATA_SECTION_MAX_SIZE/4)) = programMemory(dataSectionArrayStart:dataSectionArrayStart+(SimuRISC_Constants.DATA_SECTION_MAX_SIZE/4)-1, :);
             otherwise
                 vprintf(printOutput, 'Unrecognized section: %s, ignoring...\n', sectionID)
         end
@@ -160,7 +159,7 @@ function simulationOutput = whisperSimulateElf(NameValueArgs)
     % Writing the correct value to the .tohost variable address, to take
     % account of the last instruction which is not dumped
 
-    [~, ~, elfExtras] = parseELFFile(elfFilePath);
-    simulationOutput.dataMemory(elfExtras.tohostVarInfo.address /(SimuRISC_Constants.XLEN/8) + 1) = 1;
+    [~, elfExtras] = parseELFFile(elfFilePath);
+    simulationOutput.memoryData(elfExtras.tohostVarInfo.address /(SimuRISC_Constants.XLEN/8) + 1) = 1;
 
 end

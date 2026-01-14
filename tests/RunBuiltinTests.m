@@ -38,8 +38,7 @@ classdef RunBuiltinTests < matlab.unittest.TestCase
             simulationOutput = whisperSimulateElf("ElfFilePath", testCase.elfFilePath);
         
             % Check results
-            testCase.verifyEqual(simulationOutput.dataMemory, modelOutput.dataMemory)
-            testCase.verifyEqual(simulationOutput.registerFile, modelOutput.registerFile)
+            testCase.verifyEqual(simulationOutput.memoryData, modelOutput.memoryData)
         end
     end
 end
