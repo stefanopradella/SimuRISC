@@ -13,6 +13,7 @@ end
 
 
 %% Initialize model to fix datatypes and allow compilation
+
 if ~exist('instructionMemory', 'var')
     instructionMemory           =   uint32(zeros(2^SimuRISC_Constants.DATATYPE_MEMORY_ADDR.WordLength , 1));
     dataMemory                  =   uint32(zeros(2^SimuRISC_Constants.DATATYPE_MEMORY_ADDR.WordLength, 1));
@@ -21,15 +22,23 @@ if ~exist('instructionMemory', 'var')
 end
 
 
-%% Initialize CSR
-CSRInitialValue = int32(zeros(size(SimuRISC_Constants.CSR_LUT, 1),1));
-valid_csrs = uint32(SimuRISC_Constants.CSR_LUT(:, 1));
+%% CSR
 
-% misa
-misaValue = uint32(0);
+numPMPEntries                   =   16; 
+pmpaddr                         =   uint32(zeros(1, 16));
+pmpcfg                          =   uint32(zeros(1, 4));
 
-CSRInitialValue(SimuRISC_Constants.CSR_LUT(:, 1) == hex2dec('300'))         =   hex2dec('0x1800');      %  Only m-mode is supported
+% Set first entry to mask addr out of RAM
+% Second entry is for both text and data memory, use symbols from symbol
+% table
+pmpaddr(1)                      =   uint32(hex2dec(elfExtras.symbolTable{strcmp(elfExtras.symbolTable{:, "symbolName"}, "_start"), "st_value"}));
+pmpaddr(2)                      =   uint32(hex2dec(elfExtras.symbolTable{strcmp(elfExtras.symbolTable{:, "symbolName"}, "_end"), "st_value"}));
+pmpcfg(1)                       =   hex2dec('0F00');
+
+% pmpaddr is shifted by 2 bits as from specifications
+pmpaddr = bitshift(pmpaddr, -2);
 
 
 %% Simulation time limit
+
 simMaxTime                      =   1e4/clockFrequency;
