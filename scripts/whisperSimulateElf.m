@@ -80,7 +80,7 @@ function simulationOutput = whisperSimulateElf(NameValueArgs)
     % Read GP registers and CSR status from snapshot
     simulationOutput.registerFile = uint32(zeros(1, 32));
     simulationOutput.CSR = SimuRISC_Constants.CSR_LUT;
-    simulationOutput.CSR.value = zeros(size(simulationOutput.CSR, 1);
+    simulationOutput.CSR.value = zeros(size(simulationOutput.CSR, 1), 1);
 
     simulationOutput.pc = 0;
 
