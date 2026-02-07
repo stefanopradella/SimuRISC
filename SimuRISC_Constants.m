@@ -9,14 +9,8 @@ classdef SimuRISC_Constants
         RAM_BASE_ADDR               =   hex2dec('80000000');
         DATA_SECTION_MAX_SIZE       =   hex2dec('1000');
     
-        CSR_LUT = int32([[...
-            hex2dec('300');  ...    % mstatus
-            hex2dec('305');  ...    % mtvec
-            hex2dec('341');  ...    % mepc
-            hex2dec('342');  ...    % mcause
-            hex2dec('3A0');  ...    % pmpcfg0
-            hex2dec('3B0');  ...    % pmpaddr0
-            hex2dec('F14');  ...    % mhartid
-        ], (1:7)']);
+        CSR_LUT = cell2table(   {   "minstret",         uint32(hex2dec('b02')); ...
+                                    "minstreth",        uint32(hex2dec('b82')); ...
+                                }, "VariableNames", ["name", "address"]);
     end
 end

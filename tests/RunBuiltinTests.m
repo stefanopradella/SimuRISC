@@ -38,7 +38,14 @@ classdef RunBuiltinTests < matlab.unittest.TestCase
             simulationOutput = whisperSimulateElf("ElfFilePath", testCase.elfFilePath);
         
             % Check results
-            testCase.verifyEqual(simulationOutput.memoryData, modelOutput.memoryData)
+            testCase.verifyEqual(simulationOutput.memoryData, modelOutput.memoryData);
+            testCase.verifyEqual(modelOutput.registerFile, simulationOutput.registerFile);
+
+            % Check that the number of retired instruciton is the same.
+            % Take into account that the number of retired instruction in
+            % whisper is 1 less because the exit instructions is not logged
+            % in register dump
+            testCase.verifyEqual(modelOutput.numRetiredInstructions - 1, uint32(simulationOutput.CSR{simulationOutput.CSR.name == "minstret", "value"}));
         end
     end
 end
