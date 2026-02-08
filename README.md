@@ -108,10 +108,10 @@ Target Frequency: 50 MHz
 
 | Resource        | Usage | Available | Utilization (%) |
 | --------------- | ----- | --------- | --------------- |
-| Slice LUTs      | 3792  | 53200     | 7.13            |
-| Slice Registers | 1681  | 106400    | 1.58            |
+| Slice LUTs      | 3939  | 53200     | 7.40            |
+| Slice Registers | 1669  | 106400    | 1.57            |
 | DSPs            | 0     | 220       | 0               |
-| Block RAM Tile  | 32    | 140       | 22.86           |
+| Block RAM Tile  | 16    | 140       | 11.43           |
 | URAM            | 0     | 0         | 0               |
 
 Maximum clock frequency: 46.29 MHz

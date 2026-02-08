@@ -14,9 +14,8 @@ end
 
 %% Initialize model to fix datatypes and allow compilation
 
-if ~exist('instructionMemory', 'var')
-    instructionMemory           =   uint32(zeros(2^SimuRISC_Constants.DATATYPE_MEMORY_ADDR.WordLength , 1));
-    dataMemory                  =   uint32(zeros(2^SimuRISC_Constants.DATATYPE_MEMORY_ADDR.WordLength, 1));
+if ~exist('memoryData', 'var')
+    memoryData           =   uint32(zeros(2^SimuRISC_Constants.DATATYPE_MEMORY_ADDR.WordLength , 1));
     entryPointAddress           =   hex2dec('80000000');
     tohost_address              =   hex2dec('1000');
 end
@@ -28,13 +27,19 @@ numPMPEntries                   =   16;
 pmpaddr                         =   uint32(zeros(1, 16));
 pmpcfg                          =   uint32(zeros(1, 4));
 
-% Set first entry to mask addr out of RAM
-% Second entry is for both text and data memory, use symbols from symbol
-% table
-pmpaddr(1)                      =   uint32(hex2dec(elfExtras.symbolTable{strcmp(elfExtras.symbolTable{:, "symbolName"}, "_start"), "st_value"}));
-pmpaddr(2)                      =   uint32(hex2dec(elfExtras.symbolTable{strcmp(elfExtras.symbolTable{:, "symbolName"}, "_end"), "st_value"}));
-pmpcfg(1)                       =   hex2dec('0F00');
+if exist('elfExtras', 'var')
+    % Set first entry to mask addr out of RAM
+    % Second entry is for both text and data memory, use symbols from symbol
+    % table
+    pmpaddr(1)                      =   uint32(hex2dec(elfExtras.symbolTable{strcmp(elfExtras.symbolTable{:, "symbolName"}, "_start"), "st_value"}));
+    pmpaddr(2)                      =   uint32(hex2dec(elfExtras.symbolTable{strcmp(elfExtras.symbolTable{:, "symbolName"}, "_end"), "st_value"}));
+    pmpcfg(1)                       =   hex2dec('0F00');
 
+else
+    pmpaddr(1)                      =   uint32(hex2dec('0x80000000'));
+    pmpaddr(2)                      =   uint32(hex2dec('0x80002000'));
+    pmpcfg(1)                       =   hex2dec('0F00');
+end
 % pmpaddr is shifted by 2 bits as from specifications
 pmpaddr = bitshift(pmpaddr, -2);
 
