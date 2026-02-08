@@ -114,10 +114,10 @@ Target Frequency: 50 MHz
 | Block RAM Tile  | 16    | 140       | 11.43           |
 | URAM            | 0     | 0         | 0               |
 
-Maximum clock frequency: 46.29 MHz
+Maximum clock frequency: 45.34 MHz
 ## Extension Support
 
 | Version |    I    |    M    |    A    |    F    |    D    |
 | ------- | :-----: | :-----: | :-----: | :-----: | :-----: |
 | 0.1.0   | Partial | Planned | Planned | Planned | Planned |
-| 0.2.0   |  Full   | Planned | Planned | Planned | Planned |
+| 0.2.0 + |  Full   | Planned | Planned | Planned | Planned |
