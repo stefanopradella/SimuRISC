@@ -6,28 +6,18 @@ loggedSignals = {   'numRetiredInstructions', ...
                     'registerFile', ...
                     'debug_hex_WB'};
 
-% Turn logs off for all signals
-signalList = find_system('SimuRISC', 'FindAll', 'on', 'Type', 'port', 'PortType', 'outport', 'DataLogging', 'on');
-for i = 1:numel(signalList)
-    signalHandle = signalList(i);
-    Simulink.sdi.markSignalForStreaming(signalHandle,'off')
-end
+allPorts = find_system('SimuRISC', 'FindAll', 'on', 'Type', 'port', 'PortType', 'outport');
 
-% Turn logs on for signals that are used to check asserts and to get RAM
-% dump
-
-for j = 1:length(loggedSignals)
-    % Find lines matching the name in the array
-    targetLines = find_system('SimuRISC', 'FindAll', 'on', 'Type', 'line', 'Name', loggedSignals{j});
+for i = 1:numel(allPorts)
+    portHandle = allPorts(i);
     
-    for k = 1:length(targetLines)
-        % Get the source port handle for the named line
-        srcPort = get_param(targetLines(k), 'SrcPortHandle');
-        
-        if srcPort ~= -1
-            Simulink.sdi.markSignalForStreaming(srcPort, 'on');
-            % Optional: Also enable standard Data Logging (logsout)
-            set_param(srcPort, 'DataLogging', 'on');
-        end
+    signalName = get_param(portHandle, 'Name');
+    
+    if strcmp(get_param(portHandle, 'DataLogging'), 'off') && ismember(signalName, loggedSignals)
+        Simulink.sdi.markSignalForStreaming(portHandle, 'on');
+        set_param(portHandle, 'DataLogging', 'on');
+    elseif strcmp(get_param(portHandle, 'DataLogging'), 'on') && ~ismember(signalName, loggedSignals)
+        Simulink.sdi.markSignalForStreaming(portHandle, 'off');
+        set_param(portHandle, 'DataLogging', 'off');
     end
 end
